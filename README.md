@@ -70,6 +70,11 @@ Make sure you have the following installed:
    ```bash
    node app.js
    ```
+   or do
+   
+   ```bash
+   npm start
+   ```
 
    By default, the server starts on **port 3000** (can be configurable).
 
