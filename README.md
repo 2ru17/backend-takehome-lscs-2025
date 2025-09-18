@@ -41,8 +41,8 @@ Make sure you have the following installed:
 
 1. **Clone the repository**
    ```bash
-   git clone -
-   cd -
+   git clone https://github.com/2ru17/backend-takehome-lscs-2025.git
+   cd /backend-takehome-lscs-2025.git
 
 2. **Install dependencies**
 
