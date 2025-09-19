@@ -267,9 +267,9 @@ Notes:
 
 ## TODO
 
-- Test scripts 
+- Test scripts
 - Make proper validation library using Zod or Joi later
-- lint
+- Lint configuration
 
 
 ---
@@ -282,4 +282,4 @@ Released under the [MIT License](LICENSE).
 
 ## Author
 
-**2ru17**
+2ru17
