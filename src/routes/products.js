@@ -4,68 +4,89 @@ const { pool } = require('../db/connection');
 // Create a new router    
 const router = express.Router();
 
-// Simple validation function to check product data
-// This function checks if the product data is valid before saving to database
-const validateProduct = (data, isUpdate = false) => {
+// Validation helper
+const validateProduct = (raw, isUpdate = false) => {
   const errors = [];
-  
-  // For new products, name and price are required
-  if (!isUpdate) {
-    if (!data.name || data.name.trim().length === 0) {
-      errors.push('Product name is required');
+  const data = { ...raw };
+
+  // Normalize boolean-like is_active if present
+  if (data.is_active !== undefined) {
+    if (typeof data.is_active === 'string') {
+      const lowered = data.is_active.toLowerCase();
+      if (['true', '1', 'yes', 'y'].includes(lowered)) data.is_active = true;
+      else if (['false', '0', 'no', 'n'].includes(lowered)) data.is_active = false;
+    } else if (typeof data.is_active === 'number') {
+      data.is_active = data.is_active === 1;
     }
+    // After normalization enforce boolean
+    if (typeof data.is_active !== 'boolean') {
+      errors.push('is_active must be boolean');
+    }
+  }
+
+  // Common checks
+  if (!isUpdate) {
+    if (!data.name || data.name.trim().length === 0) errors.push('Product name is required');
     if (data.price === undefined || data.price === null || data.price === '') {
       errors.push('Product price is required and must be greater than 0');
+    }
+  } else {
+    if (data.name !== undefined && (!data.name || data.name.trim().length === 0)) errors.push('Product name cannot be empty');
+  }
+
+  // Numeric validations
+  if (data.price !== undefined) {
+    if (typeof data.price === 'string' && data.price.trim() !== '') {
+      const parsed = Number(data.price);
+      if (!Number.isNaN(parsed)) data.price = parsed;
+    }
+    if (typeof data.price !== 'number' || Number.isNaN(data.price)) {
+      errors.push('Product price must be a number');
     } else if (data.price <= 0) {
       errors.push('Product price must be greater than 0');
     }
-  } else {
-    // For updates, only validate provided fields
-    if (data.name !== undefined && (!data.name || data.name.trim().length === 0)) {
-      errors.push('Product name cannot be empty');
+  }
+
+  if (data.quantity !== undefined) {
+    if (typeof data.quantity === 'string' && data.quantity.trim() !== '') {
+      const parsedQ = Number(data.quantity);
+      if (!Number.isNaN(parsedQ)) data.quantity = parsedQ;
     }
-    if (data.price !== undefined && data.price <= 0) {
-      errors.push('Product price must be greater than 0');
+    if (!Number.isInteger(data.quantity) || data.quantity < 0) {
+      errors.push('Product quantity must be a non-negative integer');
     }
   }
-  
-  // Check name length 
-  if (data.name && data.name.length > 255) {
-    errors.push('Product name is too long (maximum 255 characters)');
-  }
-  
-  // Check iff
-  if (data.quantity !== undefined && data.quantity < 0) {
-    errors.push('Product quantity cannot be negative');
-  }
-  
-  return errors;
+
+  if (data.name && data.name.length > 255) errors.push('Product name is too long (maximum 255 characters)');
+
+  return { errors, data };
 };
+
+// Whitelisted fields for create/update
+const ALLOWED_FIELDS = new Set(['name', 'description', 'sku', 'price', 'quantity', 'category', 'is_active']);
 
 // POST /products - Create a new product
 // This endpoint allows you to add a new product to the database
 router.post('/', async (req, res) => {
   try {
-    // First, check if the data is valid
-    const errors = validateProduct(req.body);
+    // Filter only allowed fields
+    const filtered = Object.fromEntries(Object.entries(req.body).filter(([k]) => ALLOWED_FIELDS.has(k)));
+    const { errors, data } = validateProduct(filtered);
     if (errors.length > 0) {
       return res.status(400).json({
         error: 'Validation failed',
         details: errors,
       });
     }
-
-    // Get the product data from the request body
-    // Set default values for optional fields
     const {
       name,
-      description = '',  // Empty string if not provided
-      sku = null,        // null if not provided  
+      description = '',
+      sku = null,
       price,
-      quantity = 0,      // Default to 0 if not provided
-      category = null,   // null if not provided
-      is_active = true,  // Default to active
-    } = req.body;
+      quantity = 0,
+      category = null,
+      is_active = true,
+    } = data;
 
     // SQL query to insert the new product into the database
     const query = `
@@ -85,7 +106,7 @@ router.post('/', async (req, res) => {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({
         error: 'Validation failed',
-        details: ['sku already exists'],
+        details: ['SKU must be unique'],
       });
     }
       console.error('Error creating product:', error);
@@ -160,7 +181,8 @@ router.put('/:id', async (req, res) => {
     }
 
     // Validate the new data (isUpdate = true means name/price not required)
-    const errors = validateProduct(req.body, true);
+    const filtered = Object.fromEntries(Object.entries(req.body).filter(([k]) => ALLOWED_FIELDS.has(k)));
+    const { errors, data } = validateProduct(filtered, true);
     if (errors.length > 0) {
       return res.status(400).json({
         error: 'Validation failed',
@@ -181,10 +203,10 @@ router.put('/:id', async (req, res) => {
     const values = [];  // Will store the new values
 
     // Go through each field in the request and add it to the update
-    Object.keys(req.body).forEach((key) => {
-      if (req.body[key] !== undefined) {
+    Object.keys(data).forEach((key) => {
+      if (data[key] !== undefined) {
         fields.push(`${key} = ?`);
-        values.push(req.body[key]);
+        values.push(data[key]);
       }
     });
 
@@ -210,7 +232,7 @@ router.put('/:id', async (req, res) => {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({
         error: 'Validation failed',
-        details: ['SKU already exists - please use a different SKU'],
+        details: ['SKU must be unique'],
       });
     }
     

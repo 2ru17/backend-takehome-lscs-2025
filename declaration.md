@@ -7,3 +7,4 @@
     - Generate a clear and timely roadmap to do all of the needed tasks based on the specs given due to the limited timeframe 
     - Search possible references and code snippets I can use to speed up my work
     - Generated a comprehensive report on my code based on the given specs to quality check
+    - Improve README.md according to codebase

@@ -11,12 +11,8 @@ const app = express();
 // Get port from environment variables or use 3000 as default
 const PORT = process.env.PORT || 3000;
 
-// Parse JSON data from request bodies (for POST/PUT requests)
+// Parse JSON and URL-encoded data
 app.use(express.json());
-
-
-// At thi
-// Parse URL-encoded data from forms
 app.use(express.urlencoded({ extended: true }));
 
 // API routes

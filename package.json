@@ -2,9 +2,16 @@
   "name": "backend-takehome-lscs-2025",
   "version": "1.0.0",
   "description": "A RESTful API for managing products built with Node.js, Express, and MySQL",
-  "main": "/src/app.js",
+  "main": "src/app.js",
   "scripts": {
+    "start": "node src/app.js",
+    "dev": "node src/app.js",
     "test": "npm start"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.0",
+    "mysql2": "^3.9.0"
   },
   "repository": {
     "type": "git",
